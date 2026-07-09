@@ -13,18 +13,18 @@ import { authorizeRoles } from '../middlewares/role.middleware.js'
 const router = express.Router()
 
 router.get('/users', 
-    authMiddleware,
+   /*  authMiddleware,
     authorizeRoles(
         'ROOT',
         'ADMIN'
-    ), getUsers)
+    ), */ getUsers)
 
     router.post('/users', 
-    authMiddleware,
+/*     authMiddleware,
     authorizeRoles(
         'ROOT',
         'ADMIN'
-    ), createUser) 
+    ), */ createUser) 
 
 router.put('/users/:id', 
     authMiddleware,

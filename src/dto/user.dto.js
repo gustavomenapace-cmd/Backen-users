@@ -82,7 +82,7 @@ const createUserSchema = Joi.object({
 
   role: Joi.string()
     .valid(...roles)
-    .default("USER")
+/*     .default("USER") */
     .messages({
       "any.only":
         `El rol debe ser uno de los siguientes: ${roles.join(", ")}`,
