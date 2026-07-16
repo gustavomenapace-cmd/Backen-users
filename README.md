@@ -11,6 +11,8 @@ Backend para gestionar usuarios con autenticación JWT, roles y conexión a Mong
 - bcryptjs
 - Joi para validaciones
 - dotenv para variables de entorno
+- express-rate-limit para control de solicitudes
+- rate-limiter-flexible para protección de fuerza bruta
 
 ## Requisitos
 
@@ -77,6 +79,67 @@ Authorization: Bearer <token>
 Además, para los endpoints de actualización y eliminación, el usuario debe tener rol ROOT o ADMIN.
 
 > Nota: en la implementación actual, los endpoints GET /users y POST /users están habilitados sin token. Los endpoints PUT /users/:id y DELETE /users/:id sí requieren autenticación y permisos.
+
+## Protección de seguridad
+
+El backend incorpora mecanismos para reducir abusos y registrar actividad sospechosa en MongoDB.
+
+### Características agregadas
+
+- Rate limit global para limitar la cantidad de solicitudes por ventana de tiempo.
+- Protección de fuerza bruta en la ruta de login, basada en IP + email.
+- Registro automático de eventos en MongoDB con información como IP, método HTTP, ruta, user-agent, email y detalles del incidente.
+
+### Archivos relacionados
+
+- src/middlewares/rateLimit.middleware.js
+- src/middlewares/bruteForce.middleware.js
+- src/models/securityLog.model.js
+
+### Qué se guarda en MongoDB
+
+Cada evento de seguridad queda registrado en la colección SecurityLog con campos como:
+
+- eventType: rate_limit, brute_force o suspicious_request
+- ip
+- method
+- path
+- userAgent
+- userEmail
+- details
+
+### Comportamiento esperado
+
+- Si un cliente excede el límite de solicitudes, la API responde con un 429 y guarda el evento.
+- Si se detectan demasiados intentos fallidos de login, la API responde con un 429 y bloquea temporalmente los reintentos.
+
+### Configuración desde .env
+
+Los valores de protección pueden modificarse sin tocar el código, editando el archivo .env en la raíz del proyecto:
+
+```env
+RATE_LIMIT_WINDOW_MINUTES=15
+RATE_LIMIT_MAX_REQUESTS=100
+LOGIN_WINDOW_MINUTES=15
+LOGIN_MAX_ATTEMPTS=5
+LOGIN_BLOCK_MINUTES=30
+```
+
+- RATE_LIMIT_WINDOW_MINUTES: duración de la ventana de rate limit en minutos.
+- RATE_LIMIT_MAX_REQUESTS: cantidad máxima de solicitudes permitidas en esa ventana.
+- LOGIN_WINDOW_MINUTES: tiempo de la ventana para intentos de login.
+- LOGIN_MAX_ATTEMPTS: cantidad máxima de intentos fallidos permitidos.
+- LOGIN_BLOCK_MINUTES: tiempo de bloqueo tras exceder el límite.
+
+### Probar la seguridad desde la consola
+
+Puedes ejecutar un script de prueba para validar el comportamiento de login y rate limit:
+
+```bash
+npm run test:security
+```
+
+Este script envía peticiones al endpoint de login y luego realiza múltiples solicitudes para comprobar que el middleware de rate limit responda con estado 429 cuando se supera el límite.
 
 ## Endpoints
 
