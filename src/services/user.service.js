@@ -3,10 +3,29 @@ import User from "../models/user.model.js";
 import Audit from "../models/audit.model.js";
 import mongoose from "mongoose";
 
-const getUsersService = async ({ email, id }) => {
+
+const getUsersService = async ({ email, id, requesterRole, requesterId }) => {
   console.log("📦 SERVICE → getUsersService");
   try {
-    // Buscar por ID
+    const role = requesterRole?.toUpperCase();
+    const currentUserId = requesterId?.toString();
+
+  if (!role) {
+      throw {
+        statusCode: 403,
+        message: "No tiene permisos para ver usuarios",
+      };
+    }  
+
+  if (role === "GUEST") {
+      throw {
+        statusCode: 403,
+        message: "No tiene permisos para ver usuarios",
+      };
+    }
+    
+   // Buscar por ID
+   
     if (id) {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw {
@@ -14,6 +33,14 @@ const getUsersService = async ({ email, id }) => {
           message: "Id inválido",
         };
       }
+
+      if (role === "USER" && currentUserId !== id) {
+        throw {
+          statusCode: 403,
+          message: "No tiene permisos para ver este usuario",
+        };
+      }
+
       const user = await User.findById(id).select("-password");
       if (!user) {
         throw {
@@ -21,12 +48,20 @@ const getUsersService = async ({ email, id }) => {
           message: "Usuario no encontrado",
         };
       }
+
+      if (role === "ADMIN" && user.role=== "ROOT") {
+        throw {
+          statusCode: 403,
+          message: "No tiene permisos para ver este usuario root",
+        };
+      }
+
       return user;
     }
-
+    
     // Buscar por email
     if (email) {
-      const user = await User.findOne({
+      const user = await User.findOne ({
         email,
       }).select("-password");
       if (!user) {
@@ -35,10 +70,41 @@ const getUsersService = async ({ email, id }) => {
           message: "Usuario no encontrado",
         };
       }
+
+      if (role === "USER" && user.id.toString() !== currentUserId) {
+        throw {
+          statusCode: 403,
+          message: "No tiene permisos para ver este usuario",
+        };
+      }
+
+      if (role === "ADMIN" && user.role === "ROOT") {
+        throw {
+          statusCode: 403,
+          message: "No tiene permisos para ver este usuario root",
+        };
+      }
+      
       return user;
     }
-    // Obtener todos
-    return await User.find().select("-password").sort({ nombre: 1 });
+
+    if (role=== "USER") {
+      const user = await User.findById(currentUserId).select("-password");
+      if (!user) {
+        throw {
+          statusCode: 404,
+          message: "Usuario no encontrado",
+        };
+      }
+
+      return user;
+    }
+
+    if (role === "ADMIN") {
+     return await User.find({ role: { $ne: "ROOT" } }).select("-password").sort({nombre: 1});
+    }
+
+    return await User.find().select("-password").sort({nombre: 1});
   } catch (error) {
     console.error("❌ Error en getUsersService:", error);
     throw {
@@ -47,7 +113,12 @@ const getUsersService = async ({ email, id }) => {
       errors: error.errors || null,
     };
   }
-};
+
+
+
+
+
+
 
 const createUserService = async (data) => {
   console.log("📦 SERVICE → createUserService");
@@ -212,4 +283,4 @@ const deleteUserService = async (id) => {
   }
 };
 
-export { getUsersService, createUserService, updateUserService, deleteUserService };
+export { getUsersService, createUserService, updateUserService, deleteUserService };}
