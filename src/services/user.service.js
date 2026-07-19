@@ -113,6 +113,7 @@ const getUsersService = async ({ email, id, requesterRole, requesterId }) => {
       errors: error.errors || null,
     };
   }
+}
 
 
 
@@ -283,4 +284,4 @@ const deleteUserService = async (id) => {
   }
 };
 
-export { getUsersService, createUserService, updateUserService, deleteUserService };}
+export { getUsersService, createUserService, updateUserService, deleteUserService }
